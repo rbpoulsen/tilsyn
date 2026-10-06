@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tilsyn – veje og pladser · Aabenraa Kommune</title>
+<meta name="description" content="Fotoregistrering med GPS til tilsyn på veje og pladser.">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preload" href="fonts/montserrat-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="app-name">
+    <h1>Tilsyn</h1>
+    <p>Veje og pladser</p>
+  </div>
+  <img class="logo" src="brand/logo-1-prioritet.png" alt="Aabenraa Kommune" width="97" height="32">
+</header>
+<div class="filterbar">
+  <label for="filter" class="sr-only">Vis projekt</label>
+  <select id="filter"></select>
+</div>
+
+<main>
+  <section id="view-map" class="view" aria-label="Kort">
+    <div id="map"></div>
+    <div id="map-empty" class="map-empty" hidden>Ingen registreringer med position i dette udvalg endnu.</div>
+  </section>
+
+  <section id="view-list" class="view" aria-label="Registreringer" hidden>
+    <div class="view-head">
+      <h2>Registreringer</h2>
+      <p id="list-count"></p>
+    </div>
+    <div id="list" class="cards"></div>
+  </section>
+
+  <section id="view-projects" class="view" aria-label="Projekter" hidden>
+    <div class="view-head">
+      <h2>Projekter</h2>
+      <p>Saml billeder pr. sag, strækning eller gennemgang</p>
+    </div>
+    <form id="new-project-form" class="new-project">
+      <h3>Opret projekt</h3>
+      <div class="field">
+        <label for="np-name">Projektnavn</label>
+        <input id="np-name" name="name" required maxlength="120" placeholder="F.eks. Storegade – gennemgang uge 41" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="np-desc">Beskrivelse <span class="opt">(valgfri)</span></label>
+        <input id="np-desc" name="desc" maxlength="300" placeholder="Sagsnr., vejstrækning, entreprise …" autocomplete="off">
+      </div>
+      <button class="btn primary" type="submit">Opret projekt</button>
+    </form>
+    <div id="project-list" class="projects"></div>
+    <p class="footnote">Data gemmes kun i denne browser på denne enhed. Eksportér projekterne til Excel jævnligt, og tag en <button type="button" class="linkish" id="backup-btn">sikkerhedskopi</button>.</p>
+  </section>
+</main>
+
+<div class="capture-bar">
+  <button id="gallery-btn" class="btn ghost small" type="button" title="Hent billede fra galleri">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/></svg>
+    Galleri
+  </button>
+  <button id="capture-btn" class="fab" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="4"/></svg>
+    <span>Tag billede</span>
+  </button>
+</div>
+
+<div class="bottom">
+<nav class="tabbar" aria-label="Visninger">
+  <button type="button" data-view="map" class="active">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Kort
+  </button>
+  <button type="button" data-view="list">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>Registreringer
+  </button>
+  <button type="button" data-view="projects">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Projekter
+  </button>
+</nav>
+  <svg class="buen" viewBox="0 498 1600 402" preserveAspectRatio="none" aria-hidden="true"><path d="M0 534.94C0 534.94 258.17 668.8 682.07 668.8 1105.97 668.8 1335.46 497.96 1600 497.96L1600 900 0 900 0 534.94Z"/></svg>
+</div>
+
+<input type="file" id="cam-input" accept="image/*" capture="environment" hidden>
+<input type="file" id="gal-input" accept="image/*" hidden>
+
+<!-- Registrering: ny eller redigér -->
+<dialog id="record-dialog" class="sheet">
+  <form id="record-form" method="dialog">
+    <div class="sheet-head">
+      <h2 id="record-title">Ny registrering</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Luk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+    </div>
+    <div class="sheet-body">
+      <div class="photo-wrap"><img id="rf-photo" alt="Det optagne billede"></div>
+      <div class="stamp">
+        <div><span class="lbl">Dato</span><span id="rf-date" class="num"></span></div>
+        <div><span class="lbl">Tid</span><span id="rf-time" class="num"></span></div>
+        <div><span class="lbl">Position</span><span id="rf-pos" class="num"></span></div>
+      </div>
+      <div class="pick">
+        <div id="pick-map"></div>
+        <div class="pick-bar">
+          <span id="rf-loc-note" class="note"></span>
+          <button type="button" id="rf-locate" class="btn ghost small">Brug min position</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="rf-project">Projekt</label>
+        <select id="rf-project" required></select>
+      </div>
+      <div class="field" id="rf-newproj-wrap" hidden>
+        <label for="rf-newproj">Navn på nyt projekt</label>
+        <input id="rf-newproj" maxlength="120" autocomplete="off" placeholder="F.eks. Hovedgaden 2026">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label for="rf-category">Kategori</label>
+          <select id="rf-category"></select>
+        </div>
+        <div class="field">
+          <label for="rf-status">Status</label>
+          <select id="rf-status"></select>
+        </div>
+      </div>
+      <fieldset class="field seg">
+        <legend>Prioritet</legend>
+        <div class="seg-row" id="rf-priority"></div>
+      </fieldset>
+      <div class="field">
+        <label for="rf-desc">Beskrivelse</label>
+        <textarea id="rf-desc" rows="4" maxlength="4000" placeholder="Hvad ses på billedet? Omfang, mål, placering, forslag til udbedring …"></textarea>
+      </div>
+    </div>
+    <div class="sheet-foot">
+      <button type="button" class="btn ghost" data-close>Annullér</button>
+      <button type="submit" class="btn primary" id="rf-save">Gem registrering</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Detaljer -->
+<dialog id="detail-dialog" class="sheet">
+  <div class="sheet-head">
+    <h2 id="dt-title">Registrering</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Luk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  </div>
+  <div class="sheet-body">
+    <div class="photo-wrap"><img id="dt-photo" alt="Billede fra registreringen"></div>
+    <dl id="dt-fields" class="facts"></dl>
+    <p id="dt-desc" class="desc"></p>
+  </div>
+  <div class="sheet-foot">
+    <button type="button" class="btn danger ghost" id="dt-delete">Slet</button>
+    <button type="button" class="btn ghost" id="dt-map">Vis på kort</button>
+    <button type="button" class="btn primary" id="dt-edit">Redigér</button>
+  </div>
+</dialog>
+
+<!-- Bekræft -->
+<dialog id="confirm-dialog" class="sheet small">
+  <div class="sheet-body">
+    <h2 id="cf-title"></h2>
+    <p id="cf-text"></p>
+    <div class="field" id="cf-input-wrap" hidden>
+      <label for="cf-input" id="cf-input-label"></label>
+      <input id="cf-input" maxlength="120" autocomplete="off">
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button type="button" class="btn ghost" id="cf-cancel">Annullér</button>
+    <button type="button" class="btn primary" id="cf-ok">OK</button>
+  </div>
+</dialog>
+
+<!-- Sikkerhedskopi -->
+<dialog id="backup-dialog" class="sheet small">
+  <div class="sheet-head">
+    <h2>Sikkerhedskopi</h2>
+    <button type="button" class="icon-btn" data-close aria-label="Luk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+  </div>
+  <div class="sheet-body">
+    <p>Gem alle projekter, billeder og registreringer i én fil, eller indlæs en fil fra en anden enhed. Indlæsning lægger data oven i det eksisterende.</p>
+    <div class="stack">
+      <button type="button" class="btn primary" id="bk-export">Gem sikkerhedskopi (.json)</button>
+      <label class="btn ghost file-btn">Indlæs sikkerhedskopi<input type="file" id="bk-import" accept="application/json,.json" hidden></label>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/exifr.lite.umd.js"></script>
+<script src="vendor/exceljs.min.js" defer></script>
+<script src="app.js"></script>
+</body>
+</html>

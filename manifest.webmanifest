@@ -1,0 +1,29 @@
+{
+  "name": "Tilsyn – veje og pladser · Aabenraa Kommune",
+  "short_name": "Tilsyn",
+  "description": "Fotoregistrering med GPS til tilsyn på veje og pladser.",
+  "lang": "da",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
